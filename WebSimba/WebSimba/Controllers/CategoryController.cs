@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 using WebSimba.Data;
 using WebSimba.Data.Entities;
 using WebSimba.Models.Category;
@@ -12,7 +13,7 @@ namespace WebSimba.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class CategoryController(ApplicationDbContext _context,
-        IMapper mapper) : ControllerBase
+        IMapper mapper, IConfiguration configuration) : ControllerBase
     {
         //private readonly ApplicationDbContext _context;
 
@@ -47,12 +48,22 @@ namespace WebSimba.Controllers
 
         // POST: api/Category
         [HttpPost]
-        public async Task<ActionResult<CategoryEntity>> PostCategory(CategoryEntity category)
+        public async Task<IActionResult> PostCategory([FromForm]CategoryCreateModel model)
         {
-            _context.Categories.Add(category);
+            string imageName = String.Empty;
+            if (model.Image != null)
+            {
+                imageName = Guid.NewGuid().ToString()+".jpg";
+                var dir = configuration["ImageDir"];
+                var fileSave = Path.Combine(Directory.GetCurrentDirectory(), dir, imageName);
+                using (var stream = new FileStream(fileSave, FileMode.Create))
+                    await model.Image.CopyToAsync(stream);
+            }
+            var entity = mapper.Map<CategoryEntity>(model);
+            entity.Image = imageName;
+            _context.Categories.Add(entity);
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
+            return Ok(entity.Id);
         }
 
         // PUT: api/Category/2

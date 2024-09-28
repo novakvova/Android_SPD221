@@ -1,5 +1,6 @@
 using Bogus;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using WebSimba.Data;
 using WebSimba.Data.Entities;
 using WebSimba.Mapper;
@@ -29,6 +30,49 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 
 app.MapControllers();
+
+var dir = builder.Configuration["ImageDir"];
+Console.WriteLine("-------Image dir {0}-------", dir);
+var dirPath = Path.Combine(Directory.GetCurrentDirectory(), dir);
+if(!Directory.Exists(dirPath))
+    Directory.CreateDirectory(dirPath);
+
+//app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(dirPath),
+    RequestPath = "/images"
+});
+
+var imageNo = Path.Combine(dirPath, "noimage.jpg");
+if(!File.Exists(imageNo))
+{
+    string url = "https://m.media-amazon.com/images/I/71QaVHD-ZDL.jpg";
+    try
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            // Send a GET request to the image URL
+            HttpResponseMessage response = client.GetAsync(url).Result;
+
+            // Check if the response status code indicates success (e.g., 200 OK)
+            if (response.IsSuccessStatusCode)
+            {
+                // Read the image bytes from the response content
+                byte[] imageBytes = response.Content.ReadAsByteArrayAsync().Result;
+                File.WriteAllBytes(imageNo, imageBytes);
+            }
+            else
+            {
+                Console.WriteLine($"------Failed to retrieve image. Status code: {response.StatusCode}---------");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"-----An error occurred: {ex.Message}------");
+    }
+}
 
 //Dependecy Injection
 using (var scope = app.Services.CreateScope())

@@ -10,8 +10,8 @@ using WebSimba.Data;
 namespace WebSimba.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240928113219_Init database")]
-    partial class Initdatabase
+    [Migration("20241005123053_InitDatabaseBomba")]
+    partial class InitDatabaseBomba
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

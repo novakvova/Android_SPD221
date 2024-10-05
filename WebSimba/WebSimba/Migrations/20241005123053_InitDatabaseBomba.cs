@@ -5,7 +5,7 @@
 namespace WebSimba.Migrations
 {
     /// <inheritdoc />
-    public partial class Initdatabase : Migration
+    public partial class InitDatabaseBomba : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

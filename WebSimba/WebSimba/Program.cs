@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using WebSimba.Data;
 using WebSimba.Data.Entities;
+using WebSimba.Interfaces;
 using WebSimba.Mapper;
+using WebSimba.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +14,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddAutoMapper(typeof(AppMapperProfile));
+
+builder.Services.AddScoped<IImageWorker, ImageWorker>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -84,6 +88,7 @@ if(!File.Exists(imageNo))
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var imageWorker = scope.ServiceProvider.GetRequiredService<IImageWorker>();
     dbContext.Database.Migrate(); //Запусти міграції на БД, якщо їх там немає
 
     if(!dbContext.Categories.Any())
@@ -94,12 +99,14 @@ using (var scope = app.Services.CreateScope())
         foreach (var name in categories)
         {
             var entity = dbContext.Categories.SingleOrDefault(c => c.Name == name);
-            if(entity != null)
+            if (entity != null)
                 continue;
 
+            string image = imageWorker.Save("https://picsum.photos/1200/800?category").Result;
             entity = new CategoryEntity
             {
-                Name = name
+                Name = name,
+                Image = image
             };
             dbContext.Categories.Add(entity);
             dbContext.SaveChanges();

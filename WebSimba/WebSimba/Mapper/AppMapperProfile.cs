@@ -11,7 +11,7 @@ namespace WebSimba.Mapper
             //Початок
             CreateMap<CategoryEntity, CategoryItemModel>()
                 .ForMember(x=>x.ImagePath, opt=>opt.MapFrom(x=>
-                    string.IsNullOrEmpty(x.Image) ? "/images/noimage.jpg" : $"/images/{x.Image}"));
+                    string.IsNullOrEmpty(x.Image) ? "/images/noimage.jpg" : $"/images/300_{x.Image}"));
 
             CreateMap<CategoryCreateModel, CategoryEntity>()
                 .ForMember(x => x.Image, opt => opt.Ignore());

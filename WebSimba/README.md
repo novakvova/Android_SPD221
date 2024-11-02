@@ -30,6 +30,7 @@ docker images --all
 docker ps -a
 docker stop spd221-asp_container
 docker rm spd221-asp_container
+docker rmi novakvova/spd221-asp-api:latest
 docker run -d --restart=always --name spd221-asp_container -p 5391:8080 novakvova/spd221-asp-api
 ```
 

@@ -57,11 +57,12 @@ namespace WebSimba.Services
 
             var sizes = _configuration["ImageSizes"].Split(",")
                     .Select(x => int.Parse(x));
+            //Thread.CurrentThread.ManagedThreadId
             //int[] sizes = [50, 150, 300, 600, 1200];
-            foreach (var size in sizes)
+            Parallel.ForEach(sizes, size =>
             {
                 string dirSave = Path.Combine(Directory.GetCurrentDirectory(),
-                    dir, $"{size}_{imageName}");
+                   dir, $"{size}_{imageName}");
                 using (var imageLoad = Image.Load(bytes))
                 {
                     // Resize the image (50% of original dimensions)
@@ -74,7 +75,24 @@ namespace WebSimba.Services
                     // Save the image with compression
                     imageLoad.Save(dirSave, new WebpEncoder());
                 }
-            }
+            });
+            //foreach (var size in sizes)
+            //{
+            //    string dirSave = Path.Combine(Directory.GetCurrentDirectory(),
+            //        dir, $"{size}_{imageName}");
+            //    using (var imageLoad = Image.Load(bytes))
+            //    {
+            //        // Resize the image (50% of original dimensions)
+            //        imageLoad.Mutate(x => x.Resize(new ResizeOptions
+            //        {
+            //            Size = new Size(size, size),
+            //            Mode = ResizeMode.Max
+            //        }));
+
+            //        // Save the image with compression
+            //        imageLoad.Save(dirSave, new WebpEncoder());
+            //    }
+            //}
             return imageName;
         }
 

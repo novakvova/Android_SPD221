@@ -1,6 +1,7 @@
 using Bogus;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using System.Diagnostics;
 using WebSimba.Data;
 using WebSimba.Data.Entities;
 using WebSimba.Interfaces;
@@ -11,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddAutoMapper(typeof(AppMapperProfile));
 
@@ -90,8 +91,10 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var imageWorker = scope.ServiceProvider.GetRequiredService<IImageWorker>();
     dbContext.Database.Migrate(); //Запусти міграції на БД, якщо їх там немає
+    Stopwatch stopWatch = new Stopwatch();
+    stopWatch.Start();
 
-    if(!dbContext.Categories.Any())
+    if (!dbContext.Categories.Any())
     {
         const int number = 10;
         var categories = new Faker("uk").Commerce
@@ -112,6 +115,46 @@ using (var scope = app.Services.CreateScope())
             dbContext.SaveChanges();
         }
     }
+
+    if(!dbContext.Products.Any())
+    {
+        var catIds = dbContext.Categories.Select(x => x.Id).ToArray();
+        const int productNumbers = 30;
+        var faker = new Faker();
+        for (int i = 0; i < productNumbers; i++) {
+            
+            var product = new ProductEntity
+            {
+                Name = faker.Commerce.ProductName(),
+                CategoryId = faker.PickRandom(catIds),
+                Price = Decimal.Parse(faker.Commerce.Price(100, 3000))
+            };
+            int imageCount = faker.Random.Number(3, 6);
+            for (int j = 0; j < imageCount; j++)
+            {
+                string image = imageWorker.Save("https://picsum.photos/1200/800?product").Result;
+                ProductImageEntity pi = new ProductImageEntity
+                {
+                    Priority = j, 
+                    Image = image,
+                    Product = product
+                };
+                dbContext.ProductImages.Add(pi);
+            }
+            dbContext.Products.Add(product);
+            dbContext.SaveChanges();
+        }
+    }
+
+    stopWatch.Stop();
+    // Get the elapsed time as a TimeSpan value.
+    TimeSpan ts = stopWatch.Elapsed;
+
+    // Format and display the TimeSpan value.
+    string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+        ts.Hours, ts.Minutes, ts.Seconds,
+        ts.Milliseconds / 10);
+    Console.WriteLine("-----------------Seed Conpleted------------- " + elapsedTime);
 }
 
 app.Run();

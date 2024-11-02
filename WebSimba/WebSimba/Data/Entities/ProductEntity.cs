@@ -15,5 +15,6 @@ namespace WebSimba.Data.Entities
         public int CategoryId { get; set; }
         // Навігаційна властивість
         public virtual CategoryEntity ? Category { get; set; }
+        public virtual ICollection<ProductImageEntity>? Images { get; set; }
     }
 }

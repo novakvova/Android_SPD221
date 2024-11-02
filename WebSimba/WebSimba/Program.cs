@@ -1,9 +1,12 @@
 using Bogus;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
+using WebSimba.Constants;
 using WebSimba.Data;
 using WebSimba.Data.Entities;
+using WebSimba.Data.Entities.Identity;
 using WebSimba.Interfaces;
 using WebSimba.Mapper;
 using WebSimba.Services;
@@ -13,6 +16,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddIdentity<UserEntity, RoleEntity>(options =>
+{
+    options.Stores.MaxLengthForKeys = 128;
+    options.Password.RequireDigit = false;
+    options.Password.RequiredLength = 5;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireLowercase = false;
+})
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddAutoMapper(typeof(AppMapperProfile));
 
@@ -90,6 +105,10 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var imageWorker = scope.ServiceProvider.GetRequiredService<IImageWorker>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<UserEntity>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<RoleEntity>>();
+
+
     dbContext.Database.Migrate(); //Запусти міграції на БД, якщо їх там немає
     Stopwatch stopWatch = new Stopwatch();
     stopWatch.Start();
@@ -143,6 +162,40 @@ using (var scope = app.Services.CreateScope())
             }
             dbContext.Products.Add(product);
             dbContext.SaveChanges();
+        }
+    }
+
+    if (!dbContext.Roles.Any())
+    {
+        foreach (var role in Roles.GetAll)
+        {
+            var result = roleManager.CreateAsync(new RoleEntity { Name = role }).Result;
+            if(!result.Succeeded)
+            {
+                Console.WriteLine($"--Error create Role {role}--");
+            }
+        }
+    }
+
+    if (!dbContext.Users.Any())
+    {
+        string image = imageWorker.Save("https://picsum.photos/1200/800?person").Result;
+        var user = new UserEntity
+        {
+            Email="admin@gmail.com",
+            UserName="admin@gmail.com",
+            LastName="Підкаблучник",
+            FirstName="Іван",
+            Image= image
+        };
+        var result = userManager.CreateAsync(user,"123456").Result;
+        if(!result.Succeeded)
+        {
+            Console.WriteLine($"--Problem create user--{user.Email}");
+        }
+        else
+        {
+            result = userManager.AddToRoleAsync(user, Roles.Admin).Result;
         }
     }
 
